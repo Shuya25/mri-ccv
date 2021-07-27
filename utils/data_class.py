@@ -25,7 +25,7 @@ class BrainDataset(Dataset):
 
     def _preprocess(self, voxel):
         cut_range = 4
-        voxel = voxel[:, 8:88, :]
+        # voxel = voxel[:, 8:88, :]
         voxel = np.clip(voxel, 0, cut_range * np.std(voxel))
         voxel = normalize(voxel, np.min(voxel), np.max(voxel))
         voxel = voxel[np.newaxis, ]

@@ -13,11 +13,7 @@ class Encoder(nn.Module):
         self.conv3 = nn.Conv3d(3, 32, 3, padding=1)
         self.conv4 = nn.Conv3d(32, 64, 3, padding=1)
         self.fc1 = nn.Linear(10 * 10 * 10 * 64, 512)
-        self.fc2 = nn.Linear(512, 2)
-        self.fc_mu = nn.Linear(512, 150)
-        self.fc_logvar = nn.Linear(512, 150)
 
-        self.dropout = nn.Dropout(p=0.5)
         self.sigmoid = nn.Sigmoid()
         self.batchnorm3d1 = nn.BatchNorm3d(3)
         self.batchnorm3d12 = nn.BatchNorm3d(3)
@@ -47,8 +43,7 @@ class Decoder(nn.Module):
             (40, 40, 40), mode="trilinear", align_corners=True)
         self.upsamp3 = nn.Upsample(
             (80, 80, 80), mode="trilinear", align_corners=True)
-        #self.dfc2 = nn.Linear(150, 512)
-        self.dfc2 = nn.Linear(150, 512)
+
         self.dfc1 = nn.Linear(512, 10*10*10*64)
         self.deconv1 = nn.ConvTranspose3d(64, 32, 3, padding=1)
         self.deconv2 = nn.ConvTranspose3d(32, 3, 3, padding=1)
@@ -74,9 +69,23 @@ class Decoder(nn.Module):
         return x
 
 
-class FujiNet1(Encoder):
+class FujiNet1(nn.Module):
     def __init__(self):
         super().__init__()
+        self.pool = nn.MaxPool3d(2, 2)
+        self.conv1 = nn.Conv3d(1, 3, 3, padding=1)
+        self.conv2 = nn.Conv3d(3, 3, 3, padding=1)
+        self.conv3 = nn.Conv3d(3, 32, 3, padding=1)
+        self.conv4 = nn.Conv3d(32, 64, 3, padding=1)
+        self.fc1 = nn.Linear(10 * 10 * 10 * 64, 512)
+        self.fc2 = nn.Linear(512, 2)
+
+        self.dropout = nn.Dropout(p=0.5)
+        self.batchnorm3d1 = nn.BatchNorm3d(3)
+        self.batchnorm3d12 = nn.BatchNorm3d(3)
+        self.batchnorm3d2 = nn.BatchNorm3d(32)
+        self.batchnorm3d3 = nn.BatchNorm3d(64)
+        self.batchnorm1 = nn.BatchNorm1d(512)
 
     def forward(self, x):
         x = self.pool(x)
@@ -94,7 +103,7 @@ class FujiNet1(Encoder):
         return x
 
 
-class Cae(Encoder, Decoder):
+class Cae(nn.Module):
     def __init__(self):
         super().__init__()
         self.encoder = Encoder()
@@ -110,14 +119,17 @@ class Cae(Encoder, Decoder):
         return x
 
 
-class Vae(Encoder, Decoder):
+class Vae(nn.Module):
     def __init__(self):
         super().__init__()
         self.encoder = Encoder()
         self.decoder = Decoder()
+        self.fc_mu = nn.Linear(512, 150)
+        self.fc_logvar = nn.Linear(512, 150)
+        self.dfc2 = nn.Linear(150, 512)
 
     def get_mu_var(self, x):
-        x = self.encoder.forward(x)
+        x = self.encoder(x)
         # mu = self.encoder.fc_mu(x)
         mu = self.fc_mu(x)
         logvar = self.fc_logvar(x)
@@ -134,7 +146,7 @@ class Vae(Encoder, Decoder):
 
     def decode(self, x):
         x = F.relu(self.dfc2(x))
-        x = self.decoder.forward(x)
+        x = self.decoder(x)
         return x
 
     def forward(self, x):

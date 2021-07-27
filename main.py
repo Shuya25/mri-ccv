@@ -1,16 +1,18 @@
 import os
-import os.path as osp
+# import os.path as osp
 import torchio as tio
 import numpy as np
-from PIL import Image
+# from PIL import Image
 import torch
 from torch.utils.data import DataLoader
+from torchio.transforms.augmentation.intensity.random_bias_field import RandomBiasField
+from torchio.transforms.augmentation.intensity.random_noise import RandomNoise
 from torchvision import transforms
 from sklearn.model_selection import GroupShuffleSplit, train_test_split
 import argparse
-import csv
-import random
-import sys
+# import csv
+# import random
+# import sys
 
 from datasets.dataset import load_data
 import models.models as models
@@ -28,7 +30,7 @@ def parser():
 
     parser = argparse.ArgumentParser(description="example")
     # CNN or CAE or VAE
-    parser.add_argument("--model", type=str, default="CAE")
+    parser.add_argument("--model", type=str, default="CNN")
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--epoch", type=int, default=200)
     parser.add_argument("--lr", type=float, default=0.001)
@@ -46,10 +48,12 @@ class ImageTransformio():
     def __init__(self):
         self.transform = {
             "train": tio.Compose([
-                tio.RandomAffine(scales=(0.9, 1.2), degrees=10, isotropic=True,
+                tio.transforms.RandomAffine(scales=(0.9, 1.2), degrees=10, isotropic=True,
                                  center="image", default_pad_value="mean", image_interpolation='linear'),
+                tio.transforms.RandomNoise(),
+                tio.transforms.RandomBiasField(),
                 # tio.ZNormalization(),
-                # tio.RescaleIntensity((0, 1))  # , in_min_max=(0.1, 255)),
+                tio.transforms.RescaleIntensity((0, 1))
             ]),
             "val": tio.Compose([
                 # tio.ZNormalization(),
@@ -64,7 +68,7 @@ class ImageTransformio():
 
 def load_dataloader(n_train_rate, batch_size):
 
-    data = load_data(kinds=["ADNI2-2"], classes=["CN", "AD"], unique=True)
+    data = load_data(kinds=["ADNI2-2"], classes=["CN", "AD"], unique=True, blacklist=True)
     #data = dataset.load_data(kinds=kinds,classes=classes,unique=False)
     pids = []
     for i in range(len(data)):
@@ -75,8 +79,8 @@ def load_dataloader(n_train_rate, batch_size):
     val_data = data[val_idx]
 
     #train_datadict, val_datadict = train_test_split(dataset, test_size=1-n_train_rate, shuffle=True, random_state=SEED_VALUE)
-    # transform = ImageTransformio()
-    transform = None
+    transform = ImageTransformio()
+    # transform = None
     train_dataset = BrainDataset(
         data_dict=train_data, transform=transform, phase="train")
     val_dataset = BrainDataset(
@@ -99,7 +103,7 @@ def main():
 
     if args.model == "CNN":
         net = models.FujiNet1()
-        log_path = "./logs/" + args.log + "_cnn-en2/"
+        log_path = "./logs/" + args.log + "_cnn-IIP1-drop+DA3/"
         print("net: CNN")
     elif args.model == "CAE":
         net = models.Cae()
@@ -121,15 +125,15 @@ def main():
         "cuda:0" if torch.cuda.is_available() and True else "cpu")
     print("device:", device)
 
-    torch.nn.init.kaiming_normal_(net.conv1.weight)
-    torch.nn.init.kaiming_normal_(net.conv2.weight)
-    torch.nn.init.kaiming_normal_(net.conv3.weight)
-    torch.nn.init.kaiming_normal_(net.conv4.weight)
+    # torch.nn.init.kaiming_normal_(net.encoder.conv1.weight)
+    # torch.nn.init.kaiming_normal_(net.encoder.conv2.weight)
+    # torch.nn.init.kaiming_normal_(net.encoder.conv3.weight)
+    # torch.nn.init.kaiming_normal_(net.encoder.conv4.weight)
 
-    torch.nn.init.kaiming_normal_(net.deconv1.weight)
-    torch.nn.init.kaiming_normal_(net.deconv2.weight)
-    torch.nn.init.kaiming_normal_(net.deconv3.weight)
-    torch.nn.init.kaiming_normal_(net.deconv4.weight)
+    # torch.nn.init.kaiming_normal_(net.decoder.deconv1.weight)
+    # torch.nn.init.kaiming_normal_(net.decoder.deconv2.weight)
+    # torch.nn.init.kaiming_normal_(net.decoder.deconv3.weight)
+    # torch.nn.init.kaiming_normal_(net.decoder.deconv4.weight)
 
     train_loader, val_loader = load_dataloader(args.n_train, args.batch_size)
     # loadnet or train

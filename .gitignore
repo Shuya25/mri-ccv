@@ -120,3 +120,4 @@ result
 wandb
 my_logs/
 logs/
+settings.json
