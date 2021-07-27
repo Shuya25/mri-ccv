@@ -1,4 +1,4 @@
 # mri-ccv
 CNN, CAE and VAE
 
-CNNとCAEとVAEをとりあえず学習できるやつ。
+CNNとCAEとVAEを学習できるようにしたもの。
